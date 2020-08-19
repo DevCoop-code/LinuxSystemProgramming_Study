@@ -1,6 +1,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>       // 파일 상태
 #include <fcntl.h>
+// int open(const char* name, int flags);
+// int open(const char* name, int flags, mode_t mode);
 /*
 open() 플래그
 Parameter(flags): O_RDONLY, O_WRONLY, O_RDWR
@@ -11,31 +13,26 @@ Parameter(flags): O_RDONLY, O_WRONLY, O_RDWR
 Parameter(mode): 파일을 생성하지 않는다면 mode인자는 무시, 반대로 mode 인자 없이 O_CREATE로 파일을 생성하면 파일 권한이 정의되지 않아 골치 아픈 일이 생김
 (O_CREATE를 사용할 때는 꼭 mode를 확인)
 파일이 생성되면 새로 만들어진 파일의 접근 권한은 mode 인자에 따라 설정.
-*/
-// int open(const char* name, int flags);
-// int open(const char* name, int flags, mode_t mode);
 
+// int creat(const char* name, mode_t mode);
 /*
 open시 O_WRONLY | O_CREATE | O_TRUNC 조합은 너무나도 일반적이라 아예 이런 동작 방식을 지원하는 시스템 콜인 creat가 존재
 */
-// int creat(const char* name, mode_t mode);
 
 #include <unistd.h>
 #include <sys/errno.h>
+// ssize_t read (int fd, void *buf, size_t len);
 /*
 파일을 읽는 매커니즘은 POSIX.1에 정의된 read() 시스템 콜을 사용하는 것
 호출할 때마다 fd가 참조하는 파일의 현재 파일 오픗셋에서 len 바이트만큼 buf로 읽어 들임. 성공하면 buf에 쓴 바이트 숫자를 반환, 파일 오프셋은 fd에서 읽은 바이트 크기만큼 전진
 읽은 바이트 수는 unsigned long 타입 크기와 동일하며 32bit 리눅스 시스템에서는 4 byte, 64bit 리눅스 시스템에서는 8 byte임
-*/
-// ssize_t read (int fd, void *buf, size_t len);
-/*
+
 read 함수 호출 시 여러 에러 값
 EBADF: 주어진 파일 디스크립터가 유효하지 않거나 읽기 가능한 모드로 열리지 않음
 EFAULT: buf로 전달된 포인터가 호출하는 프로세스의 주소 공간 밖에 존재
 EINVAL: 파일 디스크립터가 읽기를 허용하지 않는 객체에 맵핑
 EIO: 저수준 입출력 에러가 발생
-*/
-/*
+
 read() 크기 제약
 POSIX size 크기 타입
 - size_t: 바이트 단위로 크기를 측정하기 위해 사용되는 값을 저장, size_t의 최대값=SIZE_MAX
@@ -43,6 +40,7 @@ POSIX size 크기 타입
 */
 
 #include <unistd.h>
+// ssize_t write (int fd, const void *buf, size_t count);
 /*
 파일을 쓰는 매컨니즘은 POSIX.1에 정의된 write() 시스템 콜을 사용
 count 바이트만큼 파일 디스크립터 fd가 참조하는 파일의 현재 파일 위치에 시작 지점이 buf인 내용을 기록
@@ -50,7 +48,6 @@ fd가 표현하는 객체에 탐색 기능이 없다면 쓰기 작업은 항상 
 
 성공하면 쓰기에 성공한 바이트 수를 반환, 파일 오프셋도 같은 크기만큼 전진함
 */
-// ssize_t write (int fd, const void *buf, size_t count);
 
 int main(void) {
     /*
