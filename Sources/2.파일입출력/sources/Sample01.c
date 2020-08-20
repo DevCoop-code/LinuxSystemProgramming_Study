@@ -89,8 +89,38 @@ fdatasync(): fsync()와 동일한 기능을 하지만 데이터만 기록함
 fdata, fdatasync 모두 변경된 파일이 포함된 디렉터리 엔트리에 대한 디스크 동기화는 보장하지 않음
 파일의 링크가 최근에 갱신되었고 파일 데이터도 디스크에 제대로 기록되었지만 관련된 디렉터리 엔트리가 디스크에 기록되지 않았을 경우에는 그 파일에 대한 접근이 불가능
 디렉터리 엔트리 역시 디스크에 강제로 기록하려면 디렉터리 자체를 대상으로 연 파일 디스크립터를 fsync()에 인자로 넘겨야 함
+
+fsync, fdatasync 반환값과 에러 코드
+호출이 성공하면 0을 반환, 실패하면 두 함수 모두 -1을 반환 errno는 아래 세 값 중 하나를 가짐
+EBADF: 주어진 파일 디스크립터가 유효하지 않거나 쓰기 모드가 아님
+EINVAL: 주어진 파일 디스크립터가 동기화를 지원하지 않는 객체에 매핑
+EIO: 동기화 과정 중에 저수준 입출력 에러 발생
 */
 
+// void sync(void)
+/*
+호출은 항상 성공하며 버퍼의 모든 내용을 디스크에 강제로 기록
+버퍼의 모든 내용을 디스크에 기록한 뒤에 반환하도록 강제하지 않음 그냥 모든 버퍼를 디스크에 기록하는 과정을 시작하도록 요구만 할 뿐
+But, 리눅스에서는 버퍼를 모두 기록할 때까지 기다림. 데이터를 디스크에 강제로 기록하기 위해서는 fsync, fdatasync를 사용하는 것을 권장, 작업량이 많은 시스템에서는 sync() 호출이 반환하기까지 수 분이 걸릴수도 있음
+*/
+
+// int close (int fd);
+/*
+close를 호출하면 열려있는 파일 디스크립터 fd에 연관된 파일과의 맵핑을 해제, 프로세스에서 파일을 떼어냄.
+But, 파일을 닫더라도 파일을 디스크에 강제로 쓰지는 않음. 파일을 닫기 전에 디스크에 확실히 기록하려면 동기식 입출력(fsync, fdatasync)을 해야 함
+close는 파일을 닫는 작업 이외에 연결이 끊어진 파일을 디스크에서 물리적으로 완전히 제거하는 부작용이 발생할 수도 있음
+*/
+
+// off_t lseek (int fd, off_t pos, int origin);
+/*
+파일의 특정 위치로 직접 이동해야할 경우 사용
+lseek()은 파일 오프셋 갱신 외에 다른 동작은 하지 않음. 어떤 입출력도 발생시키지 않음
+Parameter(origin)
+- SEEK_CUR: fd의 파일 오프셋을 현재 오프셋에서 pos를 더한 값으로 설정
+- SEEK_END: fd의 파일 오프셋ㅅ을 현재 파일 크기에서 pos를 더한 값으로 설정
+- SEEK_SET: fd의 파일 오프셋을 pos 값으로 설정
+lseek()는 파일의 시작, 혹은 끝 지점으로 오프셋을 이동하거나, 현재 파일의 오프셋을 알아 내는데 가장 많이 사용
+*/
 int main(void) {
     /*
     [Open] the file READ ONLY Mode
@@ -235,5 +265,62 @@ int main(void) {
     else if(nr != count) {
         // Error 일 가능성이 있지만, errno는 설정되지 않음
     }
+
+    /*
+    [Sync]
+    */
+    int ret;
+    ret = fsync(fd);
+    if (ret == -1) {
+        perror("fsync");
+    }
+
+    int pos = 0;
+    pos = lseek(fd, 0, SEEK_END);
+    if (pos == (off_t)-1) {
+        perror("lseek");
+    } else {
+        printf("file total offset: %d\n", pos);
+    }
+
+    int len = 0;
+    len = pos;
+    char word[len];
+    memset(word, 0, len);
+    ssize_t readResult;
+
+    int read_fd;
+    read_fd = open("test", O_RDONLY);
+    if (read_fd == -1) {
+        perror("read");
+    }
+
+    while(len != 0 && (readResult = read(read_fd, &word, len)) != 0) {
+        if (readResult == -1) {
+            if (errno == EINTR) {
+                continue;
+            }
+            perror("read");
+        }
+    }
+    
+    for (int i = 0; i < len; i++) {
+        printf("%c \n", word[i]);
+    }
+
+    /*
+    [Close]
+    */
+    int result;
+    result = close(fd);
+    if (result == -1) {
+        perror("close");
+    }
+
+    result = close(read_fd);
+    if (result == -1) {
+        perror("close");
+    }
+
     return 0;
 }
