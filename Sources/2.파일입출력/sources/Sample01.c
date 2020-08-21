@@ -120,6 +120,16 @@ Parameter(origin)
 - SEEK_END: fd의 파일 오프셋ㅅ을 현재 파일 크기에서 pos를 더한 값으로 설정
 - SEEK_SET: fd의 파일 오프셋을 pos 값으로 설정
 lseek()는 파일의 시작, 혹은 끝 지점으로 오프셋을 이동하거나, 현재 파일의 오프셋을 알아 내는데 가장 많이 사용
+
+SEEK_END를 이용해 파일 끝을 넘어서도록 위치를 지정하는 것만으로는 아무런 일이 발생하지 않음. But, 쓰기 요청이 들어오면 파일의 마지막 오프셋과 새로운 오프셋
+사이에 새로운 공간이 만들어지며 0으로 채워짐
+이렇게 0으로 채운 공간을 구멍이라함. 
+*/
+
+// ssize_t pread(int fd, void *buf, size_t count, off_t pos);
+// ssize_t pwrite(int fd, const void *buf, size_t count, off_t pos);
+/*
+
 */
 int main(void) {
     /*
@@ -306,6 +316,21 @@ int main(void) {
     
     for (int i = 0; i < len; i++) {
         printf("%c \n", word[i]);
+    }
+
+    ret = lseek(fd, (off_t)10, SEEK_END);
+    if (ret == (off_t)-1) {
+        // Error
+    }
+
+    nr = write(fd, buf, count);
+    if (nr == -1) {
+        perror("write");
+    }
+
+    ret = fsync(fd);
+    if (ret == -1) {
+        perror("fsync");
     }
 
     /*
